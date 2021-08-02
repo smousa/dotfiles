@@ -1,0 +1,51 @@
+#! /bin/bash
+
+reset=$(    tput sgr0 )
+bold=$(     tput bold )
+
+red=$(      tput setaf 1 || tput AF 1 )
+green=$(    tput setaf 2 || tput AF 2 )
+
+# Set the default PS1
+_DEFAULT_PS1=$PS1
+
+git_ps1() {
+    # If we are in a git directory use the git ps1, otherwise fallback to the 
+    # default
+    GIT_REMOTE=$(git remote get-url origin 2> /dev/null)
+    if [ $? -eq 0 ]; then
+        GIT_REMOTE=${GIT_REMOTE%.git}
+        GIT_REMOTE=${GIT_REMOTE#*github.com?}
+        GIT_DIR=$(git rev-parse --show-prefix)
+        GIT_DIR=${GIT_DIR%/}
+		PS1='[$GIT_REMOTE] $(git_branch): ${GIT_DIR:-. }$ '
+    else
+        PS1=$_DEFAULT_PS1
+    fi
+}
+
+git_branch() {
+
+    GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    if [[ "$GIT_BRANCH" != "HEAD" ]]; then
+        # set the branch name
+        BRANCH_FORMAT=$bold
+        BRANCH_NAME=$GIT_BRANCH
+    else
+        # set the tag (commit)
+        GIT_TAG=$(git name-rev --tags --name-only HEAD)
+        GIT_COMMIT=$(git rev-parse --short HEAD)
+        BRANCH_FORMAT=$reset
+        if [[ "$GIT_TAG" != "undefined" ]]; then
+            BRANCH_NAME=$GIT_TAG@$GIT_COMMIT
+        else
+            BRANCH_NAME=$GIT_COMMIT
+        fi
+    fi
+ 
+    if [ -z "$(git status --short)" ]; then
+        echo -e "\001$BRANCH_FORMAT$green\002($BRANCH_NAME)\001$reset\002"
+    else
+        echo -e "\001$BRANCH_FORMAT$red\002{$BRANCH_NAME}\001$reset\002"
+    fi
+}
